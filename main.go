@@ -23,7 +23,7 @@ type Config struct {
 type KafkaConsumerConfig struct {
 	Zookeeper string
 	Topics    string
-	GroupName string `toml:"customer_group"`
+	GroupName string `toml:"consumer_group"`
 	CommitBuffer    int `toml:"commit_buffer"`
 }
 
@@ -64,7 +64,7 @@ func main() {
 
 	for message := range consumer.Messages() {
 		if json.Unmarshal(message.Value, &jsonStruct) != nil {
-			rest.JsonStructErrorflag = true
+			rest.SetNotJSON()
 		}
 
 		cb--

@@ -1,7 +1,7 @@
-port="8080"
+port=":8080"
 
 [kafka_consumer]
 zookeeper = "IP1:PORT1,IP2:PORT2,IP3:PORT3/NAMESPACE"
 topics = "TOPIC_NAME"
-customer_group = "GROUP_NAME"
+consumer_group = "GROUP_NAME"
 commit_buffer = 1000
