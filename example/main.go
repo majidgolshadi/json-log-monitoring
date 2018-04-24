@@ -1,4 +1,4 @@
-package main
+package example
 
 import (
 	"log"
@@ -6,17 +6,17 @@ import (
 	"os/signal"
 	"strings"
 	"time"
-	"encoding/json"
 
 	"github.com/BurntSushi/toml"
 	"github.com/Shopify/sarama"
 	"github.com/wvanbergen/kafka/consumergroup"
 	"github.com/wvanbergen/kazoo-go"
-	"github.com/majidgolshadi/json-log-monitoring/rest"
+	"github.com/majidgolshadi/json-log-monitoring"
 )
 
 type Config struct {
 	Kafka_consumer KafkaConsumerConfig
+	Monitoring Monitoring
 	Port string
 }
 
@@ -27,53 +27,49 @@ type KafkaConsumerConfig struct {
 	CommitBuffer    int `toml:"commit_buffer"`
 }
 
-var applicationConfig *Config
+type Monitoring struct {
+	CountingRegex string `toml:"counting_regex"`
+}
 
-func init() {
+func main() {
 	if _, err := os.Stat("config.toml"); err != nil {
 		log.Fatal("Config file is missing")
 		os.Exit(2)
 	}
 
-	applicationConfig = &Config{}
-	if _, err := toml.DecodeFile("config.toml", applicationConfig); err != nil {
+	cnf := &Config{}
+	if _, err := toml.DecodeFile("config.toml", cnf); err != nil {
 		log.Fatal(err)
 		os.Exit(2)
 	}
-}
 
-func main() {
 	logger := log.New(os.Stdout, "[kafka-consumer] ", log.LstdFlags)
 	sarama.Logger = logger
 
-	consumer, err := initConsumer(applicationConfig.Kafka_consumer)
-
-	defer consumer.Close()
-
+	consumer, err := initConsumer(cnf.Kafka_consumer)
 	if err != nil {
 		logger.Fatal(err.Error())
 		return
 	}
 
+	defer consumer.Close()
 	setupInterruptListener(consumer)
 
-	go rest.RunHttpServer(applicationConfig.Port)
+	analyzer := json_log_monitoring.CreateAnalyzer(cnf.Monitoring.CountingRegex)
 
-	var jsonStruct map[string]interface{}
-	cb :=  applicationConfig.Kafka_consumer.CommitBuffer
-
-	for message := range consumer.Messages() {
-		if json.Unmarshal(message.Value, &jsonStruct) != nil {
-			rest.SetNotJSON()
+	go func() {
+		cb :=  cnf.Kafka_consumer.CommitBuffer
+		for message := range consumer.Messages() {
+			analyzer.Analyze(string(message))
+			cb--
+			if cb < 1 {
+				consumer.CommitUpto(message)
+				cb = cnf.Kafka_consumer.CommitBuffer
+			}
 		}
+	}()
 
-		cb--
-
-		if cb < 1 {
-			consumer.CommitUpto(message)
-			cb = applicationConfig.Kafka_consumer.CommitBuffer
-		}
-	}
+	json_log_monitoring.RunHttpServer(analyzer, cnf.Port)
 }
 
 func setupInterruptListener(consumer *consumergroup.ConsumerGroup) {

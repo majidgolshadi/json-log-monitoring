@@ -5,3 +5,7 @@ zookeeper = "IP1:PORT1,IP2:PORT2,IP3:PORT3/NAMESPACE"
 topics = "TOPIC_NAME"
 consumer_group = "GROUP_NAME"
 commit_buffer = 1000
+
+[monitoring]
+validation_regex = "{.+}"
+counting_regex = '.+"hostname": "(.+?)".+'
