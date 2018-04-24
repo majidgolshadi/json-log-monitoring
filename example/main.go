@@ -1,4 +1,4 @@
-package example
+package main
 
 import (
 	"log"
@@ -60,7 +60,7 @@ func main() {
 	go func() {
 		cb :=  cnf.Kafka_consumer.CommitBuffer
 		for message := range consumer.Messages() {
-			analyzer.Analyze(string(message))
+			analyzer.Analyze(message.Value)
 			cb--
 			if cb < 1 {
 				consumer.CommitUpto(message)
