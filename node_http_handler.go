@@ -3,22 +3,15 @@ package json_log_monitoring
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"encoding/json"
 )
 
 func GetCounter(c *gin.Context) {
 	valid, counter := Analyzer.getResult()
-
-	httpStatusCode := http.StatusOK
 	if !valid {
-		httpStatusCode = 480
-	}
-	jsonRes, err := json.Marshal(counter)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(480, gin.H{"error": "invalid data"})
 	}
 
-	c.JSON(httpStatusCode, jsonRes)
+	c.JSON(http.StatusOK, counter)
 }
 
 func GetCounterAndReset(c *gin.Context) {
@@ -27,12 +20,8 @@ func GetCounterAndReset(c *gin.Context) {
 
 	httpStatusCode := http.StatusOK
 	if !valid {
-		httpStatusCode = 480
-	}
-	jsonRes, err := json.Marshal(counter)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(480, gin.H{"error": "invalid data"})
 	}
 
-	c.JSON(httpStatusCode, jsonRes)
+	c.JSON(httpStatusCode, counter)
 }

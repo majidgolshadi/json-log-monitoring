@@ -15,9 +15,8 @@ import (
 )
 
 type Config struct {
-	Kafka_consumer KafkaConsumerConfig
-	Monitoring Monitoring
 	Port string
+	Kafka_consumer KafkaConsumerConfig
 }
 
 type KafkaConsumerConfig struct {
@@ -25,10 +24,6 @@ type KafkaConsumerConfig struct {
 	Topics    string
 	GroupName string `toml:"consumer_group"`
 	CommitBuffer    int `toml:"commit_buffer"`
-}
-
-type Monitoring struct {
-	CountingRegex string `toml:"counting_regex"`
 }
 
 func main() {
@@ -53,9 +48,9 @@ func main() {
 	}
 
 	defer consumer.Close()
-	setupInterruptListener(consumer)
+	go setupInterruptListener(consumer)
 
-	analyzer := json_log_monitoring.CreateAnalyzer(cnf.Monitoring.CountingRegex)
+	analyzer := json_log_monitoring.CreateAnalyzer()
 
 	go func() {
 		cb :=  cnf.Kafka_consumer.CommitBuffer
@@ -76,12 +71,10 @@ func setupInterruptListener(consumer *consumergroup.ConsumerGroup) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	go func() {
-		<-c
-		if err := consumer.Close(); err != nil {
-			println("Error closing the consumer", err.Error())
-		}
-	}()
+	<-c
+	if err := consumer.Close(); err != nil {
+		println("Error closing the consumer", err.Error())
+	}
 }
 
 func initConsumer(kc KafkaConsumerConfig) (*consumergroup.ConsumerGroup, error) {
